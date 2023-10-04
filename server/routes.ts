@@ -136,6 +136,63 @@ class Routes {
     const fromId = (await User.getUserByUsername(from))._id;
     return await Friend.rejectRequest(fromId, user);
   }
+
+  // Initial outline of design for the rest of the RESTful routes
+  @Router.put("/posts/:_id/comment")
+  postComment() {
+    // Posts comment
+    // session: identifies user
+    // text: message in the comment
+    // postID: ID of the post to add comment on
+  }
+  @Router.delete("/posts/:_id/comment")
+  deleteComment() {
+    // Deletes comment
+    // session: identifies user
+    // postID: ID of the post to delete comment from
+    // commentID: ID of the comment to remove
+  }
+  @Router.put("/posts/:_id/link")
+  linkClothingItem() {
+    // Link clothing item to a post
+    // postID: ID of the post to link clothing item to
+    // link: URL of clothing item to link
+  }
+  @Router.delete("/posts/:_id/link")
+  unlinkClothingItem() {
+    // Unlink clothing item from a post
+    // postID: ID of the post to link clothing item to
+    // link: URL of clothing item to remove
+  }
+  @Router.put("/posts/:_id/save")
+  savePost() {
+    // Adds post to user's favorites
+    // session: identifies user
+    // postID: ID of the post to save
+  }
+  @Router.delete("/posts/:_id/save")
+  unsavePost() {
+    // Removes post from user's favorites
+    // session: identifies user
+    // postID: ID of the post to save
+  }
+  @Router.put("/posts/suggest")
+  suggestPost() {
+    // Suggests post to user based on the user's activity (posts / favorites)
+    // session: identifies user
+    // postType: can be outfit or shopping post
+    // userFavorites: set of user's favorited posts
+    // userPosts: set of posts the user has shared
+  }
+  @Router.put("/posts/suggest/keyword")
+  refineByKeywordSearch() {
+    // Suggests post to user, refined by keyword search and based on user's activity (posts / favorites)
+    // session: identifies user
+    // postType: can be outfit or shopping post
+    // userFavorites: set of user's favorited posts
+    // userPosts: set of posts the user has shared
+    // keywords: keywords to refine the post suggestions
+  }
 }
 
 export default getExpressRouter(new Routes());
