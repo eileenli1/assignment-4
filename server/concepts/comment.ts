@@ -6,15 +6,15 @@ import { NotAllowedError, NotFoundError } from "./errors";
 export interface CommentDoc extends BaseDoc {
   author: ObjectId;
   content: string;
-  post: ObjectId;
+  item: ObjectId; // the item that the comment is on (for example, a post)
 }
 
 export default class CommentConcept {
   public readonly comments = new DocCollection<CommentDoc>("comments");
 
-  async create(author: ObjectId, content: string, post: ObjectId) {
-    const _id = await this.comments.createOne({ author, content, post });
-    return { msg: "Comment successfully created!", post: await this.comments.readOne({ _id }) };
+  async create(author: ObjectId, content: string, item: ObjectId) {
+    const _id = await this.comments.createOne({ author, content, item });
+    return { msg: "Comment successfully created!", comment: await this.comments.readOne({ _id }) };
   }
 
   async getComments(query: Filter<CommentDoc>) {
@@ -26,6 +26,10 @@ export default class CommentConcept {
 
   async getByAuthor(author: ObjectId) {
     return await this.getComments({ author });
+  }
+
+  async getByAssociatedItem(item: ObjectId) {
+    return await this.getComments({ item });
   }
 
   async update(_id: ObjectId, update: Partial<CommentDoc>) {
@@ -50,7 +54,7 @@ export default class CommentConcept {
   }
 
   private sanitizeUpdate(update: Partial<CommentDoc>) {
-    // Make sure the update cannot change the author.
+    // Make sure the update cannot change the author or item it is associated with
     const allowedUpdates = ["content", "options"];
     for (const key in update) {
       if (!allowedUpdates.includes(key)) {

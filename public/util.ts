@@ -77,6 +77,96 @@ const operations: operation[] = [
     method: "DELETE",
     fields: { id: "input" },
   },
+  {
+    name: "Get Reviews (empty for all)",
+    endpoint: "/api/reviews",
+    method: "GET",
+    fields: { author: "input" },
+  },
+  {
+    name: "Create Review",
+    endpoint: "/api/reviews",
+    method: "POST",
+    fields: { link: "input", content: "input", rating: "input" },
+  },
+  {
+    name: "Update Review",
+    endpoint: "/api/reviews/:id",
+    method: "PATCH",
+    fields: { id: "input", update: { link: "input", content: "input", rating: "input", options: { backgroundColor: "input" } } },
+  },
+  {
+    name: "Delete Review",
+    endpoint: "/api/reviews/:id",
+    method: "DELETE",
+    fields: { id: "input" },
+  },
+  {
+    name: "Get Profile",
+    endpoint: "/api/profiles/:username",
+    method: "GET",
+    fields: { username: "input" },
+  },
+  {
+    name: "Create Profile",
+    endpoint: "/api/profiles/:username",
+    method: "POST",
+    fields: { username: "input", profilePicture: "input" },
+  },
+  {
+    name: "Update Profile",
+    endpoint: "/api/profiles/:username",
+    method: "PATCH",
+    fields: { username: "input", update: { user: "input", profilePicture: "input" } },
+  },
+  {
+    name: "Delete Profile",
+    endpoint: "/api/profiles/:username",
+    method: "DELETE",
+    fields: { username: "input" },
+  },
+  {
+    name: "Get Comments by Post",
+    endpoint: "/api/posts/:postId/comments",
+    method: "GET",
+    fields: { postId: "input" },
+  },
+  {
+    name: "Add Comment",
+    endpoint: "/api/posts/:postId/comment",
+    method: "POST",
+    fields: { text: "input", postId: "input" },
+  },
+  {
+    name: "Delete Comment",
+    endpoint: "/api/posts/comment/:id",
+    method: "DELETE",
+    fields: { id: "input" },
+  },
+  {
+    name: "Save Post to Favorites",
+    endpoint: "/api/posts/:postId/save",
+    method: "POST",
+    fields: { postId: "input" },
+  },
+  {
+    name: "Unsave Post from Favorites",
+    endpoint: "/api/posts/:postId/save",
+    method: "DELETE",
+    fields: { postId: "input" },
+  },
+  {
+    name: "Get Number Saves on Post",
+    endpoint: "/api/posts/:postId/numSaves",
+    method: "GET",
+    fields: { postId: "input" },
+  },
+  {
+    name: "Get User Favorites (empty for all)",
+    endpoint: "/api/favorites",
+    method: "GET",
+    fields: { username: "input" },
+  },
 ];
 
 // Do not edit below here.

@@ -2,8 +2,9 @@ import { ObjectId } from "mongodb";
 
 import { Router, getExpressRouter } from "./framework/router";
 
-import { Friend, Post, User, WebSession } from "./app";
+import { Comment, Favorite, Friend, Post, Profile, Review, User, WebSession } from "./app";
 import { PostDoc, PostOptions } from "./concepts/post";
+import { ReviewDoc } from "./concepts/review";
 import { UserDoc } from "./concepts/user";
 import { WebSessionDoc } from "./concepts/websession";
 import Responses from "./responses";
@@ -28,7 +29,14 @@ class Routes {
   @Router.post("/users")
   async createUser(session: WebSessionDoc, username: string, password: string) {
     WebSession.isLoggedOut(session);
-    return await User.create(username, password);
+
+    const created = await User.create(username, password);
+
+    if (created.user) {
+      await Profile.create(created.user._id); // automatically creates profile for user
+    }
+
+    return created;
   }
 
   @Router.patch("/users")
@@ -41,6 +49,9 @@ class Routes {
   async deleteUser(session: WebSessionDoc) {
     const user = WebSession.getUser(session);
     WebSession.end(session);
+
+    await Profile.delete(user); // should delete user profile once user is deleted
+
     return await User.delete(user);
   }
 
@@ -73,6 +84,10 @@ class Routes {
   async createPost(session: WebSessionDoc, content: string, options?: PostOptions) {
     const user = WebSession.getUser(session);
     const created = await Post.create(user, content, options);
+    if (created.post) {
+      await Profile.addPost(user, created.post._id);
+    }
+
     return { msg: created.msg, post: await Responses.post(created.post) };
   }
 
@@ -87,6 +102,8 @@ class Routes {
   async deletePost(session: WebSessionDoc, _id: ObjectId) {
     const user = WebSession.getUser(session);
     await Post.isAuthor(user, _id);
+    await Profile.removePost(user, _id);
+
     return Post.delete(_id);
   }
 
@@ -137,61 +154,135 @@ class Routes {
     return await Friend.rejectRequest(fromId, user);
   }
 
-  // Initial outline of design for the rest of the RESTful routes
-  @Router.put("/posts/:_id/comment")
-  postComment() {
+  @Router.get("/posts/:_postId/comments")
+  async getCommentsByPost(_postId: ObjectId) {
+    return await Comment.getByAssociatedItem(_postId);
+  }
+
+  @Router.put("/posts/:_postId/comment")
+  async postComment(session: WebSessionDoc, text: string, _postId: ObjectId) {
     // Posts comment
     // session: identifies user
     // text: message in the comment
-    // postID: ID of the post to add comment on
+    // _id: ID of the item to add comment on
+    const user = WebSession.getUser(session);
+    const created = await Comment.create(user, text, _postId);
+    return { msg: created.msg, comment: await Responses.comment(created.comment) };
   }
-  @Router.delete("/posts/:_id/comment")
-  deleteComment() {
+  @Router.delete("/posts/comment/:_id")
+  async deleteComment(session: WebSessionDoc, _id: ObjectId) {
     // Deletes comment
     // session: identifies user
-    // postID: ID of the post to delete comment from
-    // commentID: ID of the comment to remove
+    // _id: ID of the comment to remove
+    const user = WebSession.getUser(session);
+    await Comment.isAuthor(user, _id);
+    return Comment.delete(_id);
   }
-  @Router.put("/posts/:_id/link")
-  linkClothingItem() {
-    // Link clothing item to a post
-    // postID: ID of the post to link clothing item to
-    // link: URL of clothing item to link
-  }
-  @Router.delete("/posts/:_id/link")
-  unlinkClothingItem() {
-    // Unlink clothing item from a post
-    // postID: ID of the post to link clothing item to
-    // link: URL of clothing item to remove
-  }
-  @Router.put("/posts/:_id/save")
-  savePost() {
-    // Adds post to user's favorites
+  @Router.put("/posts/:_postId/save")
+  async savePost(session: WebSessionDoc, _postId: ObjectId) {
+    // Adds post to user's favorites (and automatically adds to user profile)
     // session: identifies user
-    // postID: ID of the post to save
+    // _id: ID of the item (such as post) to save
+    const user = WebSession.getUser(session);
+    await Profile.addFavorite(user, _postId);
+
+    return await Favorite.addToFavorites(user, _postId);
   }
-  @Router.delete("/posts/:_id/save")
-  unsavePost() {
-    // Removes post from user's favorites
+  @Router.delete("/posts/:_postId/save")
+  async unsavePost(session: WebSessionDoc, _postId: ObjectId) {
+    // Removes post from user's favorites (and automatically deletes from user profile)
     // session: identifies user
-    // postID: ID of the post to save
+    // _id: ID of the item to unsave
+    const user = WebSession.getUser(session);
+    await Profile.removeFavorite(user, _postId);
+
+    return await Favorite.removeFromFavorites(user, _postId);
   }
-  @Router.put("/posts/suggest")
-  suggestPost() {
-    // Suggests post to user based on the user's activity (posts / favorites)
-    // session: identifies user
-    // postType: can be outfit or shopping post
-    // userFavorites: set of user's favorited posts
-    // userPosts: set of posts the user has shared
+
+  @Router.get("/posts/:_postId/numSaves")
+  async getNumberSavesByPost(_postId: ObjectId) {
+    return await Favorite.countItemFavorites(_postId);
   }
-  @Router.put("/posts/suggest/keyword")
-  refineByKeywordSearch() {
-    // Suggests post to user, refined by keyword search and based on user's activity (posts / favorites)
-    // session: identifies user
-    // postType: can be outfit or shopping post
-    // userFavorites: set of user's favorited posts
-    // userPosts: set of posts the user has shared
-    // keywords: keywords to refine the post suggestions
+
+  @Router.get("/favorites")
+  async getFavorites(username?: string) {
+    let favorites;
+    if (username) {
+      const id = (await User.getUserByUsername(username))._id;
+      favorites = await Favorite.getByUser(id);
+    } else {
+      favorites = await Favorite.getFavorites({});
+    }
+    return Responses.favorites(favorites);
+  }
+
+  @Router.get("/reviews")
+  async getReviews(author?: string) {
+    let reviews;
+    if (author) {
+      const id = (await User.getUserByUsername(author))._id;
+      reviews = await Review.getByAuthor(id);
+    } else {
+      reviews = await Review.getReviews({});
+    }
+    return Responses.reviews(reviews);
+  }
+
+  @Router.post("/reviews")
+  async createReview(session: WebSessionDoc, link: string, content: string, rating: number, options?: PostOptions) {
+    const user = WebSession.getUser(session);
+    const created = await Review.create(user, link, content, rating, options);
+
+    if (created.review) {
+      await Profile.addReview(user, created.review._id);
+    }
+
+    return { msg: created.msg, review: await Responses.review(created.review) };
+  }
+
+  @Router.patch("/reviews/:_id")
+  async updateReview(session: WebSessionDoc, _id: ObjectId, update: Partial<ReviewDoc>) {
+    const user = WebSession.getUser(session);
+    await Review.isAuthor(user, _id);
+    await Profile.removeReview(user, _id);
+
+    return await Review.update(_id, update);
+  }
+
+  @Router.delete("/reviews/:_id")
+  async deleteReview(session: WebSessionDoc, _id: ObjectId) {
+    const user = WebSession.getUser(session);
+    await Review.isAuthor(user, _id);
+    return Review.delete(_id);
+  }
+
+  @Router.get("/profile/:username")
+  async getProfile(username: string) {
+    const user = await User.getUserByUsername(username);
+
+    return { msg: `this is the returned ${user._id}` };
+
+    //return Profile.getProfileByUser(user._id);
+  }
+
+  @Router.post("/profile/:username")
+  async createProfile(username: string, profilePicture?: string) {
+    const user = await User.getUserByUsername(username);
+    const created = await Profile.create(user._id, profilePicture);
+    return { msg: created.msg, profile: await Responses.profile(created.profile) };
+  }
+
+  @Router.patch("/profile/:username")
+  async updateProfile(username: string, update: Partial<PostDoc>) {
+    const user = await User.getUserByUsername(username);
+    return await Profile.update(user._id, update);
+  }
+
+  @Router.delete("/profile/:username")
+  async deleteProfile(username: string) {
+    const user = await User.getUserByUsername(username);
+
+    return Profile.delete(user._id);
   }
 }
 

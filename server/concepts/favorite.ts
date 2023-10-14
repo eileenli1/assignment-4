@@ -5,15 +5,15 @@ import { NotAllowedError, NotFoundError } from "./errors";
 
 export interface FavoriteDoc extends BaseDoc {
   user: ObjectId;
-  post: ObjectId;
+  item: ObjectId; // generic, can represent posts, etc.
 }
 
 export default class FavoriteConcept {
   public readonly favorites = new DocCollection<FavoriteDoc>("favorites");
 
-  async addToFavorites(user: ObjectId, post: ObjectId) {
-    const _id = await this.favorites.createOne({ user, post });
-    return { msg: "Post successfully added to favorites!", post: await this.favorites.readOne({ _id }) };
+  async addToFavorites(user: ObjectId, item: ObjectId) {
+    const _id = await this.favorites.createOne({ user, item });
+    return { msg: "Post successfully added to favorites!", favorite: await this.favorites.readOne({ _id }) };
   }
 
   async getFavorites(query: Filter<FavoriteDoc>) {
@@ -23,12 +23,20 @@ export default class FavoriteConcept {
     return posts;
   }
 
-  async getByUser(author: ObjectId) {
-    return await this.getFavorites({ author });
+  async getByUser(user: ObjectId) {
+    return await this.getFavorites({ user });
   }
 
-  async removeFromFavorites(_id: ObjectId) {
-    await this.favorites.deleteOne({ _id });
+  async getByItem(item: ObjectId) {
+    return await this.getFavorites({ item });
+  }
+
+  async countItemFavorites(item: ObjectId) {
+    return await this.favorites.count({ item });
+  }
+
+  async removeFromFavorites(user: ObjectId, _id: ObjectId) {
+    await this.favorites.deleteOne({ user, _id });
     return { msg: "Post deleted successfully from favorites!" };
   }
 

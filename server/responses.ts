@@ -1,6 +1,10 @@
 import { User } from "./app";
+import { CommentDoc } from "./concepts/comment";
+import { FavoriteDoc } from "./concepts/favorite";
 import { AlreadyFriendsError, FriendNotFoundError, FriendRequestAlreadyExistsError, FriendRequestDoc, FriendRequestNotFoundError } from "./concepts/friend";
 import { PostAuthorNotMatchError, PostDoc } from "./concepts/post";
+import { ProfileDoc } from "./concepts/profile";
+import { ReviewDoc } from "./concepts/review";
 import { Router } from "./framework/router";
 
 /**
@@ -20,11 +24,68 @@ export default class Responses {
   }
 
   /**
+   * Convert CommentDoc into more readable format for the frontend by converting the author id into a username.
+   */
+  static async comment(comment: CommentDoc | null) {
+    if (!comment) {
+      return comment;
+    }
+    const author = await User.getUserById(comment.author);
+    return { ...comment, author: author.username };
+  }
+
+  /**
+   * Convert ProfileDoc into more readable format for the frontend by converting the author id into a username.
+   */
+  static async profile(profile: ProfileDoc | null) {
+    if (!profile) {
+      return profile;
+    }
+    const user = await User.getUserById(profile.user);
+    return { ...profile, user: user.username };
+  }
+
+  /**
+   * Convert ReviewDoc into more readable format for the frontend by converting the author id into a username.
+   */
+  static async review(review: ReviewDoc | null) {
+    if (!review) {
+      return review;
+    }
+    const author = await User.getUserById(review.author);
+    return { ...review, user: author.username };
+  }
+
+  /**
    * Same as {@link post} but for an array of PostDoc for improved performance.
    */
   static async posts(posts: PostDoc[]) {
     const authors = await User.idsToUsernames(posts.map((post) => post.author));
     return posts.map((post, i) => ({ ...post, author: authors[i] }));
+  }
+
+  /**
+   * Same as {@link post} but for an array of ReviewDoc for improved performance.
+   */
+  static async reviews(reviews: ReviewDoc[]) {
+    const authors = await User.idsToUsernames(reviews.map((review) => review.author));
+    return reviews.map((review, i) => ({ ...review, author: authors[i] }));
+  }
+
+  /**
+   * Same as {@link post} but for an array of FavoriteDoc for improved performance.
+   */
+  static async favorites(favorites: FavoriteDoc[]) {
+    const users = await User.idsToUsernames(favorites.map((favorite) => favorite.user));
+    return favorites.map((favorite, i) => ({ ...favorite, user: users[i] }));
+  }
+
+  /**
+   * Same as {@link post} but for an array of CommenteDoc for improved performance.
+   */
+  static async comments(comments: CommentDoc[]) {
+    const authors = await User.idsToUsernames(comments.map((comment) => comment.author));
+    return comments.map((comment, i) => ({ ...comment, author: authors[i] }));
   }
 
   /**
