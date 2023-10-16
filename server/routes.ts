@@ -154,22 +154,22 @@ class Routes {
     return await Friend.rejectRequest(fromId, user);
   }
 
-  @Router.get("/posts/:_postId/comments")
-  async getCommentsByPost(_postId: ObjectId) {
-    return await Comment.getByAssociatedItem(_postId);
+  @Router.get("/comments/item/:_itemId")
+  async getCommentsByItem(_itemId: ObjectId) {
+    return await Comment.getByAssociatedItem(_itemId);
   }
 
-  @Router.put("/posts/:_postId/comment")
-  async postComment(session: WebSessionDoc, text: string, _postId: ObjectId) {
+  @Router.post("/comments/item/:_itemId")
+  async addComment(session: WebSessionDoc, text: string, _itemId: ObjectId) {
     // Posts comment
     // session: identifies user
     // text: message in the comment
     // _id: ID of the item to add comment on
     const user = WebSession.getUser(session);
-    const created = await Comment.create(user, text, _postId);
+    const created = await Comment.create(user, text, _itemId);
     return { msg: created.msg, comment: await Responses.comment(created.comment) };
   }
-  @Router.delete("/posts/comment/:_id")
+  @Router.delete("/comments/:_id")
   async deleteComment(session: WebSessionDoc, _id: ObjectId) {
     // Deletes comment
     // session: identifies user
@@ -178,28 +178,30 @@ class Routes {
     await Comment.isAuthor(user, _id);
     return Comment.delete(_id);
   }
-  @Router.put("/posts/:_postId/save")
+  @Router.post("/favorites/:_postId")
   async savePost(session: WebSessionDoc, _postId: ObjectId) {
     // Adds post to user's favorites (and automatically adds to user profile)
     // session: identifies user
     // _id: ID of the item (such as post) to save
     const user = WebSession.getUser(session);
+    console.log("reaches here");
     await Profile.addFavorite(user, _postId);
 
     return await Favorite.addToFavorites(user, _postId);
   }
-  @Router.delete("/posts/:_postId/save")
+  @Router.delete("/favorites/:_postId")
   async unsavePost(session: WebSessionDoc, _postId: ObjectId) {
     // Removes post from user's favorites (and automatically deletes from user profile)
     // session: identifies user
     // _id: ID of the item to unsave
+    console.log("reaches here");
     const user = WebSession.getUser(session);
     await Profile.removeFavorite(user, _postId);
 
     return await Favorite.removeFromFavorites(user, _postId);
   }
 
-  @Router.get("/posts/:_postId/numSaves")
+  @Router.get("/posts/numSaves/:_postId")
   async getNumberSavesByPost(_postId: ObjectId) {
     return await Favorite.countItemFavorites(_postId);
   }
@@ -244,7 +246,6 @@ class Routes {
   async updateReview(session: WebSessionDoc, _id: ObjectId, update: Partial<ReviewDoc>) {
     const user = WebSession.getUser(session);
     await Review.isAuthor(user, _id);
-    await Profile.removeReview(user, _id);
 
     return await Review.update(_id, update);
   }
@@ -253,36 +254,36 @@ class Routes {
   async deleteReview(session: WebSessionDoc, _id: ObjectId) {
     const user = WebSession.getUser(session);
     await Review.isAuthor(user, _id);
+    await Profile.removeReview(user, _id);
+
     return Review.delete(_id);
   }
 
   @Router.get("/profile/:username")
-  async getProfile(username: string) {
-    const user = await User.getUserByUsername(username);
+  async getProfile(session: WebSessionDoc, username: string) {
+    // Should only be able to view someone's profile if you're friends with them.
+    // Can always view your own profile
+    const currentUser = WebSession.getUser(session);
+    const userToView = await User.getUserByUsername(username);
+    const currentUserFriends = await Friend.getFriends(currentUser);
+    const currentUserFriendStrings = currentUserFriends.map((friend) => friend.toString());
 
-    return { msg: `this is the returned ${user._id}` };
+    if (currentUser.toString() !== userToView._id.toString() && !currentUserFriendStrings.includes(userToView._id.toString())) {
+      return { msg: `Cannot view profile, you and ${username} are not friends` };
+    }
 
-    //return Profile.getProfileByUser(user._id);
-  }
-
-  @Router.post("/profile/:username")
-  async createProfile(username: string, profilePicture?: string) {
-    const user = await User.getUserByUsername(username);
-    const created = await Profile.create(user._id, profilePicture);
-    return { msg: created.msg, profile: await Responses.profile(created.profile) };
+    return Profile.getProfileByUser(userToView._id);
   }
 
   @Router.patch("/profile/:username")
-  async updateProfile(username: string, update: Partial<PostDoc>) {
-    const user = await User.getUserByUsername(username);
-    return await Profile.update(user._id, update);
-  }
+  async updateProfile(session: WebSessionDoc, username: string, update: Partial<PostDoc>) {
+    const currentUser = WebSession.getUser(session);
 
-  @Router.delete("/profile/:username")
-  async deleteProfile(username: string) {
-    const user = await User.getUserByUsername(username);
+    const profileUser = await User.getUserByUsername(username);
+    const profile = await Profile.getProfileByUser(profileUser._id);
+    await Profile.isUser(currentUser, profile._id);
 
-    return Profile.delete(user._id);
+    return await Profile.update(profile._id, update);
   }
 }
 

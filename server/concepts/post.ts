@@ -28,6 +28,12 @@ export default class PostConcept {
     return posts;
   }
 
+  async getPostIdsByAuthor(author: ObjectId) {
+    const posts = await this.getByAuthor(author);
+
+    return posts.map((post) => post._id);
+  }
+
   async getPostById(_id: ObjectId) {
     return await this.posts.readOne({ _id });
   }

@@ -12,8 +12,29 @@ export default class FavoriteConcept {
   public readonly favorites = new DocCollection<FavoriteDoc>("favorites");
 
   async addToFavorites(user: ObjectId, item: ObjectId) {
+    const favoriteItemIds = await this.getFavoriteItemIds(user);
+    const favoriteItemIdStrings = favoriteItemIds.map((id) => id.toString());
+
+    if (favoriteItemIdStrings.includes(item.toString())) {
+      throw new DuplicateFavoriteError(user, item);
+    }
+
     const _id = await this.favorites.createOne({ user, item });
+
     return { msg: "Post successfully added to favorites!", favorite: await this.favorites.readOne({ _id }) };
+  }
+
+  async removeFromFavorites(user: ObjectId, item: ObjectId) {
+    //const _favoriteId = await this.favorites.readOne({ user, item });
+    const favoriteItemIds = await this.getFavoriteItemIds(user);
+    const favoriteItemIdStrings = favoriteItemIds.map((id) => id.toString());
+
+    if (!item.toString() || !favoriteItemIdStrings.includes(item.toString())) {
+      throw new FavoriteDoesNotExistError(user, item);
+    }
+
+    await this.favorites.deleteOne({ user, item });
+    return { msg: "Post deleted successfully from favorites!" };
   }
 
   async getFavorites(query: Filter<FavoriteDoc>) {
@@ -23,8 +44,14 @@ export default class FavoriteConcept {
     return posts;
   }
 
+  async getFavoriteItemIds(user: ObjectId) {
+    const favorites = await this.getByUser(user);
+
+    return favorites.map((favorite) => favorite.item);
+  }
+
   async getByUser(user: ObjectId) {
-    return await this.getFavorites({ user });
+    return await this.getFavorites({ user: user });
   }
 
   async getByItem(item: ObjectId) {
@@ -33,11 +60,6 @@ export default class FavoriteConcept {
 
   async countItemFavorites(item: ObjectId) {
     return await this.favorites.count({ item });
-  }
-
-  async removeFromFavorites(user: ObjectId, _id: ObjectId) {
-    await this.favorites.deleteOne({ user, _id });
-    return { msg: "Post deleted successfully from favorites!" };
   }
 
   async isUser(user: ObjectId, _id: ObjectId) {
@@ -53,9 +75,27 @@ export default class FavoriteConcept {
 
 export class FavoriteUserNotMatchError extends NotAllowedError {
   constructor(
-    public readonly author: ObjectId,
+    public readonly user: ObjectId,
     public readonly _id: ObjectId,
   ) {
-    super("{0} is not the user associated with favorite {1}!", author, _id);
+    super("{0} is not the user associated with favorite {1}!", user, _id);
+  }
+}
+
+export class DuplicateFavoriteError extends NotAllowedError {
+  constructor(
+    public readonly user: ObjectId,
+    public readonly itemId: ObjectId,
+  ) {
+    super("{0} is already favorited by user {1}!", itemId, user);
+  }
+}
+
+export class FavoriteDoesNotExistError extends NotAllowedError {
+  constructor(
+    public readonly user: ObjectId,
+    public readonly itemId: ObjectId,
+  ) {
+    super("{0} is not in user {1}'s favorites!", itemId, user);
   }
 }
