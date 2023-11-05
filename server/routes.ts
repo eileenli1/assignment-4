@@ -222,8 +222,12 @@ class Routes {
   async getReviews(author?: string) {
     let reviews;
     if (author) {
-      const id = (await User.getUserByUsername(author))._id;
-      reviews = await Review.getByAuthor(id);
+      try {
+        const id = (await User.getUserByUsername(author))._id;
+        reviews = await Review.getByAuthor(id);
+      } catch (error) {
+        reviews = await Review.getByStore(author);
+      }
     } else {
       reviews = await Review.getReviews({});
     }
@@ -231,12 +235,14 @@ class Routes {
   }
 
   @Router.get("/reviews/store")
-  async getReviewsByStore(store?: string) {
+  async getReviewsByStore(storeName?: string) {
     let reviews;
-    if (store) {
-      reviews = await Review.getByStore(store);
+    if (storeName) {
+      reviews = await Review.getByStore(storeName);
     } else {
+      console.log("hi");
       reviews = await Review.getReviews({});
+      console.log(reviews);
     }
     return Responses.reviews(reviews);
   }

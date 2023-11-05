@@ -38,7 +38,7 @@ export default class ReviewConcept {
     const reviews = await this.getReviews({});
     console.log(reviews[0].link);
     return reviews.filter((review) => {
-      return review.link.includes(store);
+      return review.link && review.link.includes(store.toLowerCase());
     });
   }
 
