@@ -37,8 +37,8 @@ export default class ReviewConcept {
   async getByStore(store: string) {
     const reviews = await this.getReviews({});
 
-    return reviews.filter((obj) => {
-      return obj.link.includes(store.toLowerCase());
+    return reviews.filter((review) => {
+      return review.link.includes(store);
     });
   }
 
