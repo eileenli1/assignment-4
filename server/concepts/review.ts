@@ -34,6 +34,12 @@ export default class ReviewConcept {
     return await this.getReviews({ author });
   }
 
+  async getByStore(store: string) {
+    const reviews = await this.getReviews({});
+
+    return reviews.filter((obj) => obj.link.includes(store.toLowerCase()));
+  }
+
   async update(_id: ObjectId, update: Partial<ReviewDoc>) {
     this.sanitizeUpdate(update);
     await this.reviews.updateOne({ _id }, update);

@@ -230,6 +230,17 @@ class Routes {
     return Responses.reviews(reviews);
   }
 
+  @Router.get("/reviews/store")
+  async getReviewsByStore(store?: string) {
+    let reviews;
+    if (store) {
+      reviews = await Review.getByStore(store);
+    } else {
+      reviews = await Review.getReviews({});
+    }
+    return Responses.reviews(reviews);
+  }
+
   @Router.post("/reviews")
   async createReview(session: WebSessionDoc, link: string, content: string, rating: number, options?: PostOptions) {
     const user = WebSession.getUser(session);

@@ -84,6 +84,12 @@ const operations: operation[] = [
     fields: { author: "input" },
   },
   {
+    name: "Get Reviews by store(empty for all)",
+    endpoint: "/api/reviews/store",
+    method: "GET",
+    fields: { store: "input" },
+  },
+  {
     name: "Create Review",
     endpoint: "/api/reviews",
     method: "POST",
